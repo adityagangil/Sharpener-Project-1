@@ -8,6 +8,12 @@ function App() {
   const [error, setError] = useState(null);
   const [retrying, setRetrying] = useState(false);
 
+  const [newMovie, setNewMovie] = useState({
+    title: '',
+    openingText: '',
+    releaseDate: '',
+  });
+
   const fetchMovies = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -46,8 +52,58 @@ function App() {
 
   const moviesList = useMemo(() => <MoviesList movies={movies} />, [movies]);
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewMovie((prevMovie) => ({
+      ...prevMovie,
+      [name]: value,
+    }));
+  };
+
+  const addMovieHandler = () => {
+    console.log('New Movie Object:', newMovie);
+
+    // Here you can send the new movie data to the backend or update the movies state.
+    // For simplicity, we are just logging it to the console.
+  };
+
   return (
     <React.Fragment>
+      <section>
+        <div>
+          <label htmlFor="title">Title:</label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            value={newMovie.title}
+            onChange={handleInputChange}
+          />
+        </div>
+        <div>
+          <label htmlFor="openingText">Opening Text:</label>
+          <input
+            type="text"
+            id="openingText"
+            name="openingText"
+            value={newMovie.openingText}
+            onChange={handleInputChange}
+          />
+        </div>
+        <div>
+          <label htmlFor="releaseDate">Release Date:</label>
+          <input
+            type="text"
+            id="releaseDate"
+            name="releaseDate"
+            value={newMovie.releaseDate}
+            onChange={handleInputChange}
+          />
+        </div>
+        <div>
+          <button onClick={addMovieHandler}>Add Movie</button>
+        </div>
+      </section>
       <section>
         <button onClick={fetchMovies} disabled={isLoading || retrying}>
           {isLoading ? 'Fetching...' : 'Fetch Movies'}
