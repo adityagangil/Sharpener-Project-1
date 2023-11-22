@@ -1,125 +1,81 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import MoviesList from './components/MoviesList';
+import AddMovie from './components/AddMovie';
 import './App.css';
 
 function App() {
   const [movies, setMovies] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [retrying, setRetrying] = useState(false);
 
-  const [newMovie, setNewMovie] = useState({
-    title: '',
-    openingText: '',
-    releaseDate: '',
-  });
-
-  const fetchMovies = useCallback(async () => {
+  const fetchMoviesHandler = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch('https://swapi.dev/api/films/');
+      const response = await fetch('https://sharpener-project-1-default-rtdb.firebaseio.com/movies.json');
       if (!response.ok) {
-        throw new Error('Failed to fetch movies');
+        throw new Error('Something went wrong!');
       }
 
       const data = await response.json();
-      const transformedMovies = data.results.map((movieData) => ({
-        id: movieData.episode_id,
-        title: movieData.title,
-        openingText: movieData.opening_crawl,
-        releaseDate: movieData.release_date,
-      }));
 
-      setMovies(transformedMovies);
+      const loadedMovies = [];
+
+      for (const key in data) {
+        loadedMovies.push({
+          id: key,
+          title: data[key].title,
+          openingText: data[key].openingText,
+          releaseDate: data[key].releaseDate,
+        });
+      }
+
+      setMovies(loadedMovies);
     } catch (error) {
-      console.error('Error fetching movies:', error);
-      setError('Something went wrong... Retrying');
-      setRetrying(true);
-    } finally {
-      setIsLoading(false);
+      setError(error.message);
     }
-  }, [setIsLoading, setError, setMovies]);
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
-    fetchMovies();
-  }, [fetchMovies]);
+    fetchMoviesHandler();
+  }, [fetchMoviesHandler]);
 
-  const cancelRetry = useCallback(() => {
-    setRetrying(false);
-  }, [setRetrying]);
+  async function addMovieHandler(movie) {
+    const response = await fetch('https://sharpener-project-1-default-rtdb.firebaseio.com/movies.json', {
+      method: 'POST',
+      body: JSON.stringify(movie),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    const data = await response.json();
+    console.log(data)
+  }
 
-  const moviesList = useMemo(() => <MoviesList movies={movies} />, [movies]);
+  let content = <p>Found no movies.</p>;
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewMovie((prevMovie) => ({
-      ...prevMovie,
-      [name]: value,
-    }));
-  };
+  if (movies.length > 0) {
+    content = <MoviesList movies={movies} />;
+  }
 
-  const addMovieHandler = () => {
-    console.log('New Movie Object:', newMovie);
+  if (error) {
+    content = <p>{error}</p>;
+  }
 
-    // Here you can send the new movie data to the backend or update the movies state.
-    // For simplicity, we are just logging it to the console.
-  };
+  if (isLoading) {
+    content = <p>Loading...</p>;
+  }
 
   return (
     <React.Fragment>
       <section>
-        <div>
-          <label htmlFor="title">Title:</label>
-          <input
-            type="text"
-            id="title"
-            name="title"
-            value={newMovie.title}
-            onChange={handleInputChange}
-          />
-        </div>
-        <div>
-          <label htmlFor="openingText">Opening Text:</label>
-          <input
-            type="text"
-            id="openingText"
-            name="openingText"
-            value={newMovie.openingText}
-            onChange={handleInputChange}
-          />
-        </div>
-        <div>
-          <label htmlFor="releaseDate">Release Date:</label>
-          <input
-            type="text"
-            id="releaseDate"
-            name="releaseDate"
-            value={newMovie.releaseDate}
-            onChange={handleInputChange}
-          />
-        </div>
-        <div>
-          <button onClick={addMovieHandler}>Add Movie</button>
-        </div>
+        <AddMovie onAddMovie={addMovieHandler} />
       </section>
       <section>
-        <button onClick={fetchMovies} disabled={isLoading || retrying}>
-          {isLoading ? 'Fetching...' : 'Fetch Movies'}
-        </button>
-        {retrying && (
-          <button onClick={cancelRetry} style={{ marginLeft: '10px' }}>
-            Cancel Retry
-          </button>
-        )}
-        {error && <p>{error}</p>}
+        <button onClick={fetchMoviesHandler}>Fetch Movies</button>
       </section>
-      <section>
-        {isLoading && <p>Loading...</p>}
-        {!isLoading && movies.length === 0 && <p>No movies found.</p>}
-        {!isLoading && movies.length > 0 && moviesList}
-      </section>
+      <section>{content}</section>
     </React.Fragment>
   );
 }
