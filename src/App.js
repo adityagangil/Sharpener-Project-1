@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import MoviesList from './components/MoviesList';
 import './App.css';
 
@@ -8,18 +8,7 @@ function App() {
   const [error, setError] = useState(null);
   const [retrying, setRetrying] = useState(false);
 
-  useEffect(() => {
-    if (retrying) {
-      const retryInterval = setInterval(() => {
-        console.log('Retrying...');
-        fetchMovies();
-      }, 5000);
-
-      return () => clearInterval(retryInterval);
-    }
-  }, [retrying]);
-
-  async function fetchMovies() {
+  const fetchMovies = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -45,11 +34,17 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [setIsLoading, setError, setMovies]);
 
-  function cancelRetry() {
+  useEffect(() => {
+    fetchMovies();
+  }, [fetchMovies]);
+
+  const cancelRetry = useCallback(() => {
     setRetrying(false);
-  }
+  }, [setRetrying]);
+
+  const moviesList = useMemo(() => <MoviesList movies={movies} />, [movies]);
 
   return (
     <React.Fragment>
@@ -66,7 +61,8 @@ function App() {
       </section>
       <section>
         {isLoading && <p>Loading...</p>}
-        {!isLoading && <MoviesList movies={movies} />}
+        {!isLoading && movies.length === 0 && <p>No movies found.</p>}
+        {!isLoading && movies.length > 0 && moviesList}
       </section>
     </React.Fragment>
   );
