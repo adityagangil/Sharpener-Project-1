@@ -1,14 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MoviesList from './components/MoviesList';
 import './App.css';
 
 function App() {
   const [movies, setMovies] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [retrying, setRetrying] = useState(false);
 
-  async function fetchMoviesHandler() {
+  useEffect(() => {
+    if (retrying) {
+      const retryInterval = setInterval(() => {
+        console.log('Retrying...');
+        fetchMovies();
+      }, 5000);
+
+      return () => clearInterval(retryInterval);
+    }
+  }, [retrying]);
+
+  async function fetchMovies() {
     try {
       setIsLoading(true);
+      setError(null);
 
       const response = await fetch('https://swapi.dev/api/films/');
       if (!response.ok) {
@@ -26,17 +40,29 @@ function App() {
       setMovies(transformedMovies);
     } catch (error) {
       console.error('Error fetching movies:', error);
+      setError('Something went wrong... Retrying');
+      setRetrying(true);
     } finally {
       setIsLoading(false);
     }
   }
 
+  function cancelRetry() {
+    setRetrying(false);
+  }
+
   return (
     <React.Fragment>
       <section>
-        <button onClick={fetchMoviesHandler} disabled={isLoading}>
+        <button onClick={fetchMovies} disabled={isLoading || retrying}>
           {isLoading ? 'Fetching...' : 'Fetch Movies'}
         </button>
+        {retrying && (
+          <button onClick={cancelRetry} style={{ marginLeft: '10px' }}>
+            Cancel Retry
+          </button>
+        )}
+        {error && <p>{error}</p>}
       </section>
       <section>
         {isLoading && <p>Loading...</p>}
